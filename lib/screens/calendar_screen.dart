@@ -17,11 +17,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
 
   Future<void> fetchTasks(DateTime date) async {
-    final response = await ApiService.getTasks(date.toIso8601String(), 1);
-    setState(() {
-      tasks = List<Map<String, dynamic>>.from(response);
-      tasksCount[date] = tasks.length; // Сохраняем количество задач для выбранного дня
-    });
+  final response = await ApiService.getTasks(date.toIso8601String(), 1);
+  setState(() {
+    tasks = List<Map<String, dynamic>>.from(response);
+  });
 }
 
   @override
@@ -32,15 +31,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   /// Загружает задачи для всего месяца
   Future<void> fetchDaysWithTasks() async {
-  final response = await ApiService.getDaysWithTasks(1); // user_id = 1 (замени, если нужно)
-  setState(() {
-    tasksCount.clear();
-    for (var dateStr in response) {
-      DateTime date = DateTime.parse(dateStr);
-      tasksCount[date] = 1; // Отмечаем, что в этот день есть задачи
-    }
-  });
-}
+    final response = await ApiService.getDaysWithTasks(1); // user_id = 1 (замени, если нужно)
+    setState(() {
+      tasksCount.clear();
+      for (var dateStr in response) {
+        DateTime date = DateTime.parse(dateStr);
+        tasksCount[date] = 1; // Отмечаем, что в этот день есть задачи
+      }
+    });
+  }
 
 
   void _showAddTaskDialog() {
@@ -166,16 +165,29 @@ class _CalendarScreenState extends State<CalendarScreen> {
               }
               return null; // Возвращаем null для стандартного отображения
             },
+
             selectedBuilder: (context, day, focusedDay) {
-             bool hasTasks = tasksCount.containsKey(day) && tasksCount[day]! > 0;
+              bool isSelected = isSameDay(_selectedDay, day);
+              bool hasTasks = tasksCount.containsKey(day) && tasksCount[day]! > 0;
+
               return Container(
                 decoration: BoxDecoration(
-                  color: hasTasks ? Colors.lightGreenAccent : Colors.blue, // Цвет фона для выбранного дня
+                  color: isSelected
+                      ? Colors.blue // Выбранный день - синий
+                      : hasTasks
+                          ? Colors.lightGreenAccent // Дни с задачами - зелёные
+                          : Colors.transparent, // Остальные дни - без фона
                   borderRadius: BorderRadius.circular(8.0),
                 ),
-                child: Center(child: Text('${day.day}', style: TextStyle(color: Colors.white))),
+                child: Center(
+                  child: Text(
+                    '${day.day}',
+                    style: TextStyle(
+                      color: isSelected ? Colors.white : Colors.black,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,))),
               );
             },
+
             todayBuilder: (context, day, focusedDay) {
               return Container(
                 decoration: BoxDecoration(
