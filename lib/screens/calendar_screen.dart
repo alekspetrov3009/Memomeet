@@ -20,6 +20,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
   final response = await ApiService.getTasks(date.toIso8601String(), 1);
   setState(() {
     tasks = List<Map<String, dynamic>>.from(response);
+
+    // Если день не является выбранным, обновляем tasksCount
+    if (!isSameDay(_selectedDay, date)) {
+      tasksCount[date] = tasks.length;
+    }
   });
 }
 
@@ -66,6 +71,16 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 if (taskController.text.isNotEmpty && _selectedDay != null) {
                   await ApiService.addTask(_selectedDay!.toIso8601String(), taskController.text, 1);
                   fetchTasks(_selectedDay!);
+
+                  // Обновляем tasksCount вручную
+                  setState(() {
+                    if (tasksCount.containsKey(_selectedDay)) {
+                      tasksCount[_selectedDay!] = (tasksCount[_selectedDay!] ?? 0) + 1;
+                    } else {
+                      tasksCount[_selectedDay!] = 1;
+                    }
+                  });
+
                   Navigator.pop(context);
                 }
               },
