@@ -4,6 +4,9 @@ import 'share_screen.dart';
 import 'package:memomeet/services/api_service.dart';
 
 class CalendarScreen extends StatefulWidget {
+  final int userId;
+  CalendarScreen({required this.userId});
+
   @override
   _CalendarScreenState createState() => _CalendarScreenState();
 }
@@ -17,7 +20,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
 
   Future<void> fetchTasks(DateTime date) async {
-  final response = await ApiService.getTasks(date.toIso8601String(), 1);
+  final response = await ApiService.getTasks(date.toIso8601String(), widget.userId);
   setState(() {
     tasks = List<Map<String, dynamic>>.from(response);
 
@@ -36,7 +39,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   /// Загружает задачи для всего месяца
   Future<void> fetchDaysWithTasks() async {
-    final response = await ApiService.getDaysWithTasks(1); // user_id = 1 (замени, если нужно)
+    final response = await ApiService.getDaysWithTasks(widget.userId); // user_id = 1 (замени, если нужно)
     setState(() {
       tasksCount.clear();
       for (var dateStr in response) {

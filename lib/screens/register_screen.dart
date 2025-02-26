@@ -1,26 +1,24 @@
 import 'package:flutter/material.dart';
-import 'calendar_screen.dart';
-import 'register_screen.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
-class LoginScreen extends StatefulWidget {
+class RegisterScreen extends StatefulWidget {
   @override
-  _LoginScreenState createState() => _LoginScreenState();
+  _RegisterScreenState createState() => _RegisterScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
 
-  Future<void> _login() async {
+  Future<void> _register() async {
     setState(() {
       _isLoading = true;
     });
 
     final response = await http.post(
-      Uri.parse('http://127.0.0.1:5000/login'), // Убедись, что бэкенд работает
+      Uri.parse('http://127.0.0.1:5000/register'),
       headers: {"Content-Type": "application/json"},
       body: jsonEncode({
         "username": _usernameController.text,
@@ -34,13 +32,8 @@ class _LoginScreenState extends State<LoginScreen> {
       _isLoading = false;
     });
 
-    if (response.statusCode == 200) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => CalendarScreen(userId: data['user_id']),
-        ),
-      );
+    if (response.statusCode == 201) {
+      Navigator.pop(context); // Возвращаемся на экран входа
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(data['message']), backgroundColor: Colors.red),
@@ -48,21 +41,10 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _navigateToRegister() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => RegisterScreen()),
-    ).then((_) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Регистрация успешна! Войдите в систему')),
-      );
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Вход')),
+      appBar: AppBar(title: Text('Регистрация')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -81,13 +63,9 @@ class _LoginScreenState extends State<LoginScreen> {
             _isLoading
                 ? CircularProgressIndicator()
                 : ElevatedButton(
-                    onPressed: _login,
-                    child: Text('Войти'),
+                    onPressed: _register,
+                    child: Text('Зарегистрироваться'),
                   ),
-            TextButton(
-              onPressed: _navigateToRegister,
-              child: Text('Нет аккаунта? Зарегистрироваться'),
-            ),
           ],
         ),
       ),

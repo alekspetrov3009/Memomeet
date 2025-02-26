@@ -5,15 +5,28 @@ class ApiService {
   static const String baseUrl = 'http://127.0.0.1:5000';
 
   // Регистрация пользователя
-  static Future<void> register(String username, String password) async {
+  static Future<bool> registerUser(String username, String password) async {
     final response = await http.post(
       Uri.parse('$baseUrl/register'),
-      headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'username': username, 'password': password}),
+      headers: {'Content-Type': 'application/json'},
     );
-    if (response.statusCode != 201) {
-      throw Exception('Ошибка регистрации');
+    return response.statusCode == 201;
+  }
+
+  // Вход пользователя
+  static Future<int?> loginUser(String username, String password) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/login'),
+      body: jsonEncode({'username': username, 'password': password}),
+      headers: {'Content-Type': 'application/json'},
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['userId']; // Получаем ID пользователя
     }
+    return null;
   }
 
   // Добавление задачи
