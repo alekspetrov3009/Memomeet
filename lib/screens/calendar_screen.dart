@@ -128,9 +128,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   void _deleteTask(int task_id) async {
-    await ApiService.deleteTask(task_id);
-    fetchTasks(_selectedDay!);
-  }
+  await ApiService.deleteTask(task_id);
+  await fetchTasks(_selectedDay!);
+
+  setState(() {
+    if (tasks.isEmpty) {
+      tasksCount.remove(_selectedDay!); // Удаляем дату из списка, если задач нет
+    }
+  });
+}
 
   @override
   Widget build(BuildContext context) {
