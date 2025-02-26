@@ -36,4 +36,24 @@ static Future<List<dynamic>> getTasks(String date, int user_id) async {
     throw Exception('Ошибка получения задач');
   }
 }
+
+static Future<void> editTask(int task_id, String new_task) async {
+  final response = await http.put(
+    Uri.parse('$baseUrl/tasks/$task_id'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({'task': new_task}),
+  );
+  if (response.statusCode != 200) {
+    throw Exception('Ошибка редактирования задачи');
+  }
+}
+
+static Future<void> deleteTask(int task_id) async {
+  final response = await http.delete(
+    Uri.parse('$baseUrl/tasks/$task_id'),
+  );
+  if (response.statusCode != 200) {
+    throw Exception('Ошибка удаления задачи');
+  }
+}
 }

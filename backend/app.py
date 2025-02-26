@@ -122,6 +122,28 @@ def get_tasks():
     conn.close()
     return jsonify([{"id": task[0], "task": task[1]} for task in tasks])
 
+# Редактирование задачи
+@app.route('/tasks/<int:task_id>', methods=['PUT'])
+def edit_task(task_id):
+    data = request.json
+    new_task = data['task']
+    conn = sqlite3.connect('calendar.db')
+    c = conn.cursor()
+    c.execute("UPDATE tasks SET task=? WHERE id=?", (new_task, task_id))
+    conn.commit()
+    conn.close()
+    return jsonify({"status": "success", "message": "Task updated"}), 200
+
+# Удаление задачи
+@app.route('/tasks/<int:task_id>', methods=['DELETE'])
+def delete_task(task_id):
+    conn = sqlite3.connect('calendar.db')
+    c = conn.cursor()
+    c.execute("DELETE FROM tasks WHERE id=?", (task_id,))
+    conn.commit()
+    conn.close()
+    return jsonify({"status": "success", "message": "Task deleted"}), 200
+
 if __name__ == '__main__':
     init_db()
     app.run(debug=True)

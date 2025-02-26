@@ -12,13 +12,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
   CalendarFormat _calendarFormat = CalendarFormat.month;
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
-  List<String> tasks = [];
+  List<Map<String, dynamic>> tasks = [];
 
   Future<void> fetchTasks(DateTime date) async {
     // Замените user_id на реальный ID пользователя
     final response = await ApiService.getTasks(date.toIso8601String(), 1);
     setState(() {
-      tasks = response.map<String>((task) => task['task']).toList();
+      tasks = List<Map<String, dynamic>>.from(response);
     });
   }
 
@@ -55,6 +55,46 @@ class _CalendarScreenState extends State<CalendarScreen> {
         );
       },
     );
+  }
+
+  void _showEditTaskDialog(Map<String, dynamic> task) {
+    TextEditingController taskController = TextEditingController(text: task['task']);
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Редактировать задачу'),
+          content: TextField(
+            controller: taskController,
+            decoration: InputDecoration(hintText: 'Введите задачу'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: Text('Отмена'),
+            ),
+            TextButton(
+              onPressed: () async {
+                if (taskController.text.isNotEmpty) {
+                  await ApiService.editTask(task['id'], taskController.text);
+                  fetchTasks(_selectedDay!);
+                  Navigator.pop(context);
+                }
+              },
+              child: Text('Сохранить'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _deleteTask(int task_id) async {
+    await ApiService.deleteTask(task_id);
+    fetchTasks(_selectedDay!);
   }
 
   @override
@@ -94,7 +134,27 @@ class _CalendarScreenState extends State<CalendarScreen> {
             child: ListView.builder(
               itemCount: tasks.length,
               itemBuilder: (context, index) {
-                return ListTile(title: Text(tasks[index]));
+                final task = tasks[index];
+                return ListTile(
+                  title: Text(task['task']),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.edit),
+                        onPressed: () {
+                          _showEditTaskDialog(task);
+                        },
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.delete),
+                        onPressed: () {
+                          _deleteTask(task['id']);
+                        },
+                      ),
+                    ],
+                  ),
+                );
               },
             ),
           ),
