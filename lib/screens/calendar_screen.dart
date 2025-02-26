@@ -13,14 +13,17 @@ class _CalendarScreenState extends State<CalendarScreen> {
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
   List<Map<String, dynamic>> tasks = [];
+  Map<DateTime, int> tasksCount = {}; // Словарь для хранения количества задач на каждый день
+
 
   Future<void> fetchTasks(DateTime date) async {
-    // Замените user_id на реальный ID пользователя
     final response = await ApiService.getTasks(date.toIso8601String(), 1);
     setState(() {
       tasks = List<Map<String, dynamic>>.from(response);
+      tasksCount[date] = tasks.length; // Сохраняем количество задач для выбранного дня
     });
-  }
+}
+
 
   void _showAddTaskDialog() {
     TextEditingController taskController = TextEditingController();
@@ -129,6 +132,41 @@ class _CalendarScreenState extends State<CalendarScreen> {
               });
               fetchTasks(selectedDay);
             },
+            eventLoader: (day) {
+              return tasksCount[day] != null && tasksCount[day]! > 0 ? [1] : [];
+            },
+            calendarBuilders: CalendarBuilders(
+            defaultBuilder: (context, day, focusedDay) {
+              if (tasksCount[day] != null && tasksCount[day]! > 0) {
+                return Container(
+                  decoration: BoxDecoration(
+                    color: Colors.lightGreenAccent, // Цвет фона для дней с задачами
+                    borderRadius: BorderRadius.circular(8.0),
+                  ),
+                  child: Center(child: Text('${day.day}')),
+                );
+              }
+              return null; // Возвращаем null для стандартного отображения
+            },
+            selectedBuilder: (context, day, focusedDay) {
+              return Container(
+                decoration: BoxDecoration(
+                  color: Colors.blue, // Цвет фона для выбранного дня
+                  borderRadius: BorderRadius.circular(8.0),
+                ),
+                child: Center(child: Text('${day.day}', style: TextStyle(color: Colors.white))),
+              );
+            },
+            todayBuilder: (context, day, focusedDay) {
+              return Container(
+                decoration: BoxDecoration(
+                  color: Colors.orange, // Цвет фона для сегодняшнего дня
+                  borderRadius: BorderRadius.circular(8.0),
+                ),
+                child: Center(child: Text('${day.day}', style: TextStyle(color: Colors.white))),
+              );
+            },
+          ),
           ),
           Expanded(
             child: ListView.builder(
