@@ -24,6 +24,24 @@ class _CalendarScreenState extends State<CalendarScreen> {
     });
 }
 
+  @override
+  void initState() {
+    super.initState();
+    fetchDaysWithTasks(); // Загружаем задачи при запуске
+  }
+
+  /// Загружает задачи для всего месяца
+  Future<void> fetchDaysWithTasks() async {
+  final response = await ApiService.getDaysWithTasks(1); // user_id = 1 (замени, если нужно)
+  setState(() {
+    tasksCount.clear();
+    for (var dateStr in response) {
+      DateTime date = DateTime.parse(dateStr);
+      tasksCount[date] = 1; // Отмечаем, что в этот день есть задачи
+    }
+  });
+}
+
 
   void _showAddTaskDialog() {
     TextEditingController taskController = TextEditingController();
@@ -122,7 +140,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           TableCalendar(
             calendarFormat: _calendarFormat,
             focusedDay: _focusedDay,
-            firstDay: DateTime(2000),
+            firstDay: DateTime(2020),
             lastDay: DateTime(2050),
             selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
             onDaySelected: (selectedDay, focusedDay) {
@@ -137,7 +155,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
             },
             calendarBuilders: CalendarBuilders(
             defaultBuilder: (context, day, focusedDay) {
-              if (tasksCount[day] != null && tasksCount[day]! > 0) {
+              if (tasksCount.containsKey(day)) {
                 return Container(
                   decoration: BoxDecoration(
                     color: Colors.lightGreenAccent, // Цвет фона для дней с задачами
@@ -149,9 +167,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
               return null; // Возвращаем null для стандартного отображения
             },
             selectedBuilder: (context, day, focusedDay) {
+             bool hasTasks = tasksCount.containsKey(day) && tasksCount[day]! > 0;
               return Container(
                 decoration: BoxDecoration(
-                  color: Colors.blue, // Цвет фона для выбранного дня
+                  color: hasTasks ? Colors.lightGreenAccent : Colors.blue, // Цвет фона для выбранного дня
                   borderRadius: BorderRadius.circular(8.0),
                 ),
                 child: Center(child: Text('${day.day}', style: TextStyle(color: Colors.white))),

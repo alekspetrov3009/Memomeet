@@ -98,6 +98,19 @@ def get_days_with_tasks():
     conn.close()
     return jsonify([day[0] for day in days])
 
+# Получение задач для диапазона дат
+@app.route('/tasks/range', methods=['GET'])
+def get_tasks_for_range():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    user_id = request.args.get('user_id')
+    conn = sqlite3.connect('calendar.db')
+    c = conn.cursor()
+    c.execute("SELECT id, date, task FROM tasks WHERE date BETWEEN ? AND ? AND user_id=?", (start_date, end_date, user_id))
+    tasks = c.fetchall()
+    conn.close()
+    return jsonify([{"id": task[0], "date": task[1], "task": task[2]} for task in tasks])
+
 if __name__ == '__main__':
     init_db()
     app.run(debug=True)
