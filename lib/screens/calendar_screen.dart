@@ -39,7 +39,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   /// Загружает задачи для всего месяца
   Future<void> fetchDaysWithTasks() async {
-    final response = await ApiService.getDaysWithTasks(widget.userId); // user_id = 1 (замени, если нужно)
+    final response = await ApiService.getDaysWithTasks(widget.userId);
     setState(() {
       tasksCount.clear();
       for (var dateStr in response) {
@@ -51,49 +51,52 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
 
   void _showAddTaskDialog() {
-    TextEditingController taskController = TextEditingController();
+  TextEditingController taskController = TextEditingController();
 
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text('Добавить задачу'),
-          content: TextField(
-            controller: taskController,
-            decoration: InputDecoration(hintText: 'Введите задачу'),
+  showDialog(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: Text('Добавить задачу'),
+        content: TextField(
+          controller: taskController,
+          decoration: InputDecoration(hintText: 'Введите задачу'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            child: Text('Отмена'),
           ),
-          actions: [
-            TextButton(
-              onPressed: () {
+          TextButton(
+            onPressed: () async {
+              if (taskController.text.isNotEmpty && _selectedDay != null) {
+                await ApiService.addTask(
+                  _selectedDay!.toIso8601String(),
+                  taskController.text,
+                  widget.userId, // Передаем userId правильно!
+                );
+                fetchTasks(_selectedDay!);
+
+                setState(() {
+                  if (tasksCount.containsKey(_selectedDay)) {
+                    tasksCount[_selectedDay!] = (tasksCount[_selectedDay!] ?? 0) + 1;
+                  } else {
+                    tasksCount[_selectedDay!] = 1;
+                  }
+                });
+
                 Navigator.pop(context);
-              },
-              child: Text('Отмена'),
-            ),
-            TextButton(
-              onPressed: () async {
-                if (taskController.text.isNotEmpty && _selectedDay != null) {
-                  await ApiService.addTask(_selectedDay!.toIso8601String(), taskController.text, 1);
-                  fetchTasks(_selectedDay!);
-
-                  // Обновляем tasksCount вручную
-                  setState(() {
-                    if (tasksCount.containsKey(_selectedDay)) {
-                      tasksCount[_selectedDay!] = (tasksCount[_selectedDay!] ?? 0) + 1;
-                    } else {
-                      tasksCount[_selectedDay!] = 1;
-                    }
-                  });
-
-                  Navigator.pop(context);
-                }
-              },
-              child: Text('Добавить'),
-            ),
-          ],
-        );
-      },
-    );
-  }
+              }
+            },
+            child: Text('Добавить'),
+          ),
+        ],
+      );
+    },
+  );
+}
 
   void _showEditTaskDialog(Map<String, dynamic> task) {
     TextEditingController taskController = TextEditingController(text: task['task']);

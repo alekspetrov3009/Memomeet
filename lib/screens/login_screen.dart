@@ -20,7 +20,7 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     final response = await http.post(
-      Uri.parse('http://127.0.0.1:5000/login'), // Убедись, что бэкенд работает
+      Uri.parse('http://127.0.0.1:5000/login'),
       headers: {"Content-Type": "application/json"},
       body: jsonEncode({
         "username": _usernameController.text,
