@@ -29,29 +29,38 @@ class ApiService {
     return null;
   }
 
-  // Добавление задачи
-  static Future<void> addTask(String date, String task, int user_id) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/tasks'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'date': date, 'task': task, 'user_id': user_id}),
-    );
-    if (response.statusCode != 201) {
-      throw Exception('Ошибка добавления задачи');
-    }
-  }
+  // Добавление задачи в конкретный календарь
+  static Future<void> addTask(String date, String task, int user_id, int calendar_id) async {
+  final response = await http.post(
+    Uri.parse('$baseUrl/tasks'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({
+      'date': date,
+      'task': task,
+      'user_id': user_id,
+      'calendar_id': calendar_id, // ✅ Передаём календарь
+    }),
+  );
 
-  // Получение задач на определённую дату
-  static Future<List<dynamic>> getTasks(String date, int user_id) async {
+  if (response.statusCode != 201) {
+    throw Exception('Ошибка добавления задачи: ${response.body}');
+  }
+}
+
+
+  // Получение задач для календаря
+  static Future<List<dynamic>> getTasks(String date, int userId, int calendarId) async {
     final response = await http.get(
-      Uri.parse('$baseUrl/tasks?date=$date&user_id=$user_id'),
+      Uri.parse('$baseUrl/tasks?date=$date&user_id=$userId&calendar_id=$calendarId'),
     );
+
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     } else {
       throw Exception('Ошибка получения задач');
     }
   }
+
 
   // Получение задач для диапазона дат
   static Future<List<dynamic>> getTasksForRange(String startDate, String endDate, int user_id) async {
@@ -96,5 +105,34 @@ class ApiService {
     throw Exception('Ошибка при получении дней с задачами');
   }
 }
+
+  // Создание календаря
+  static Future<int?> createCalendar(String name, int userId) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/calendars'),
+      body: jsonEncode({'name': name, 'user_id': userId}),
+      headers: {'Content-Type': 'application/json'},
+    );
+
+    if (response.statusCode == 201) {
+      final data = jsonDecode(response.body);
+      return data['calendar_id'];
+    }
+    return null;
+  }
+
+// Получение календарей пользователя
+  static Future<List<Map<String, dynamic>>> getCalendars(int userId) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/calendars?user_id=$userId'),
+    );
+
+    if (response.statusCode == 200) {
+      return List<Map<String, dynamic>>.from(jsonDecode(response.body));
+    } else {
+      throw Exception('Ошибка при получении календарей');
+    }
+  }
+
 
 }

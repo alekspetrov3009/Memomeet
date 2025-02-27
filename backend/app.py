@@ -10,16 +10,30 @@ CORS(app)  # Разрешить запросы с фронтенда
 def init_db():
     conn = sqlite3.connect('calendar.db')
     c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS users (
+
+    # Таблица пользователей
+    c.execute('''CREATE TABLE IF NOT EXISTS calendars (
                   id INTEGER PRIMARY KEY AUTOINCREMENT,
-                  username TEXT NOT NULL UNIQUE,
-                  password TEXT NOT NULL)''')
+                  name TEXT NOT NULL,
+                  user_id INTEGER NOT NULL,
+                  FOREIGN KEY(user_id) REFERENCES users(id))''')
+
+    # Таблица календарей
+    c.execute('''CREATE TABLE IF NOT EXISTS calendars (
+                  id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  name TEXT NOT NULL,
+                  user_id INTEGER NOT NULL,
+                  FOREIGN KEY(user_id) REFERENCES users(id))''')
+
+    # Таблица задач
     c.execute('''CREATE TABLE IF NOT EXISTS tasks (
                   id INTEGER PRIMARY KEY AUTOINCREMENT,
                   date TEXT NOT NULL,
                   task TEXT NOT NULL,
                   user_id INTEGER NOT NULL,
-                  FOREIGN KEY(user_id) REFERENCES users(id))''')
+                  calendar_id INTEGER NOT NULL,
+                  FOREIGN KEY(user_id) REFERENCES users(id),
+                  FOREIGN KEY(calendar_id) REFERENCES calendars(id))''')
     conn.commit()
     conn.close()
 
@@ -67,26 +81,35 @@ def login():
 @app.route('/tasks', methods=['POST'])
 def add_task():
     data = request.json
-    date = data['date']
-    task = data['task']
-    user_id = int(data['user_id'])
+    date = data.get('date')
+    task = data.get('task')
+    user_id = data.get('user_id')
+    calendar_id = data.get('calendar_id')  # ✅ Новый параметр
+
+    if not all([date, task, user_id, calendar_id]):
+        return jsonify({"status": "error", "message": "Заполните все поля"}), 400
 
     conn = sqlite3.connect('calendar.db')
     c = conn.cursor()
-    c.execute("INSERT INTO tasks (date, task, user_id) VALUES (?, ?, ?)", (date, task, user_id))
+    c.execute("INSERT INTO tasks (date, task, user_id, calendar_id) VALUES (?, ?, ?, ?)",
+              (date, task, user_id, calendar_id))
     conn.commit()
     conn.close()
+
     return jsonify({"status": "success", "message": "Задача добавлена"}), 201
+
 
 # Получение задач по дате и пользователю
 @app.route('/tasks', methods=['GET'])
 def get_tasks():
     date = request.args.get('date')
     user_id = int(request.args.get('user_id'))
+    calendar_id = int(request.args.get('calendar_id'))  # Новый параметр
 
     conn = sqlite3.connect('calendar.db')
     c = conn.cursor()
-    c.execute("SELECT id, task FROM tasks WHERE date=? AND user_id=?", (date, user_id))
+    c.execute("SELECT id, task FROM tasks WHERE date=? AND user_id=? AND calendar_id=?", 
+              (date, user_id, calendar_id))
     tasks = c.fetchall()
     conn.close()
 
@@ -144,6 +167,36 @@ def get_tasks_for_range():
     conn.close()
 
     return jsonify([{"id": task[0], "date": task[1], "task": task[2]} for task in tasks])
+
+# Создание календаря
+@app.route('/calendars', methods=['POST'])
+def create_calendar():
+    data = request.json
+    name = data['name']
+    user_id = data['user_id']
+
+    conn = sqlite3.connect('calendar.db')
+    c = conn.cursor()
+    c.execute("INSERT INTO calendars (name, user_id) VALUES (?, ?)", (name, user_id))
+    conn.commit()
+    calendar_id = c.lastrowid
+    conn.close()
+
+    return jsonify({"status": "success", "calendar_id": calendar_id}), 201
+
+# Получение всех календарей пользователя
+@app.route('/calendars', methods=['GET'])
+def get_calendars():
+    user_id = request.args.get('user_id')
+
+    conn = sqlite3.connect('calendar.db')
+    c = conn.cursor()
+    c.execute("SELECT id, name FROM calendars WHERE user_id=?", (user_id,))
+    calendars = [{"id": row[0], "name": row[1]} for row in c.fetchall()]
+    conn.close()
+
+    return jsonify(calendars)
+
 
 if __name__ == '__main__':
     init_db()

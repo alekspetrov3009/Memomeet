@@ -17,25 +17,44 @@ class _CalendarScreenState extends State<CalendarScreen> {
   DateTime? _selectedDay;
   List<Map<String, dynamic>> tasks = [];
   Map<DateTime, int> tasksCount = {}; // Словарь для хранения количества задач на каждый день
+  List<Map<String, dynamic>> calendars = [];
+  int? selectedCalendarId;
 
 
   Future<void> fetchTasks(DateTime date) async {
-  final response = await ApiService.getTasks(date.toIso8601String(), widget.userId);
+  if (selectedCalendarId == null) {
+    print("Ошибка: selectedCalendarId = null");
+    return;
+  }
+
+  final response = await ApiService.getTasks(date.toIso8601String(), widget.userId, selectedCalendarId!);
+
   setState(() {
     tasks = List<Map<String, dynamic>>.from(response);
-
-    // Если день не является выбранным, обновляем tasksCount
-    if (!isSameDay(_selectedDay, date)) {
-      tasksCount[date] = tasks.length;
-    }
+    tasksCount[date] = tasks.length;
   });
+
+  print("Задачи загружены: $tasks");
 }
+
+
 
   @override
   void initState() {
     super.initState();
-    fetchDaysWithTasks(); // Загружаем задачи при запуске
+    fetchCalendars();
   }
+
+  Future<void> fetchCalendars() async {
+  final response = await ApiService.getCalendars(widget.userId);
+  setState(() {
+    calendars = response;
+    if (calendars.isNotEmpty) {
+      selectedCalendarId = calendars[0]['id']; // Выбираем первый календарь по умолчанию
+      fetchTasks(DateTime.now()); // Загружаем задачи для первого календаря
+    }
+  });
+}
 
   /// Загружает задачи для всего месяца
   Future<void> fetchDaysWithTasks() async {
@@ -71,12 +90,16 @@ class _CalendarScreenState extends State<CalendarScreen> {
           ),
           TextButton(
             onPressed: () async {
-              if (taskController.text.isNotEmpty && _selectedDay != null) {
+              if (taskController.text.isNotEmpty &&
+                  _selectedDay != null &&
+                  selectedCalendarId != null) {
                 await ApiService.addTask(
                   _selectedDay!.toIso8601String(),
                   taskController.text,
-                  widget.userId, // Передаем userId правильно!
+                  widget.userId,
+                  selectedCalendarId!, // ✅ Проверяем, что не null
                 );
+
                 fetchTasks(_selectedDay!);
 
                 setState(() {
@@ -88,6 +111,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 });
 
                 Navigator.pop(context);
+              } else {
+                print("Ошибка: selectedCalendarId = null");
               }
             },
             child: Text('Добавить'),
@@ -97,6 +122,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
     },
   );
 }
+
+
 
   void _showEditTaskDialog(Map<String, dynamic> task) {
     TextEditingController taskController = TextEditingController(text: task['task']);
@@ -144,6 +171,52 @@ class _CalendarScreenState extends State<CalendarScreen> {
   });
 }
 
+void _showCreateCalendarDialog() {
+  TextEditingController nameController = TextEditingController();
+
+  showDialog(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: Text('Создать календарь'),
+        content: TextField(
+          controller: nameController,
+          decoration: InputDecoration(hintText: 'Введите название'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Отмена'),
+          ),
+          TextButton(
+            onPressed: () async {
+              if (nameController.text.isNotEmpty) {
+                int? newCalendarId = await ApiService.createCalendar(
+                  nameController.text,
+                  widget.userId,
+                );
+
+                if (newCalendarId != null) {
+                  setState(() {
+                    calendars.add({'id': newCalendarId, 'name': nameController.text});
+                    selectedCalendarId = newCalendarId;
+                  });
+
+                  fetchTasks(DateTime.now());
+                }
+
+                Navigator.pop(context);
+              }
+            },
+            child: Text('Создать'),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -163,6 +236,31 @@ class _CalendarScreenState extends State<CalendarScreen> {
       ),
       body: Column(
         children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              DropdownButton<int>(
+                value: selectedCalendarId,
+                hint: Text("Выберите календарь"),
+                items: calendars.map((calendar) {
+                  return DropdownMenuItem<int>(
+                    value: calendar['id'],
+                    child: Text(calendar['name']),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    selectedCalendarId = value;
+                    fetchTasks(DateTime.now()); // Загружаем задачи для нового календаря
+                  });
+                },
+              ),
+              IconButton(
+                icon: Icon(Icons.add),
+                onPressed: () => _showCreateCalendarDialog(),
+              ),
+            ],
+          ),
           TableCalendar(
             calendarFormat: _calendarFormat,
             focusedDay: _focusedDay,
